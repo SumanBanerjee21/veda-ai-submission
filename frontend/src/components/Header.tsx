@@ -4,8 +4,12 @@ import { ArrowLeft, ClipboardList, HelpCircle, Bell, Sparkles, ChevronDown } fro
 export default function Header() {
   return (
     <div className="h-16 flex items-center justify-between px-6 bg-transparent">
-      <div className="flex items-center gap-3">
-        <ArrowLeft size={20} className="text-gray-600 cursor-pointer" />
+      <div className="flex items-center gap-4">
+        <ArrowLeft 
+          size={20} 
+          className="text-gray-600 cursor-pointer hover:text-black transition-colors" 
+          onClick={() => window.location.reload()}
+        />
         <div className="flex items-center gap-2 text-gray-400">
           <ClipboardList size={18} />
           <span className="font-medium text-sm">Exams</span>

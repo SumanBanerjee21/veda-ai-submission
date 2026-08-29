@@ -5,7 +5,11 @@ export default function MobileHeader() {
   return (
     <div className="h-16 flex items-center justify-between px-4 bg-white md:hidden rounded-b-xl shadow-sm mb-4">
       <div className="flex items-center gap-3">
-        <ArrowLeft size={24} className="text-gray-800 cursor-pointer" />
+        <ArrowLeft 
+          size={24} 
+          className="text-gray-800 cursor-pointer" 
+          onClick={() => window.location.reload()} 
+        />
         <div className="flex items-center gap-2 font-bold text-xl text-gray-800">
           <div className="bg-gray-800 text-white p-1 rounded-md px-1.5 text-sm">V</div>
           VedaAI

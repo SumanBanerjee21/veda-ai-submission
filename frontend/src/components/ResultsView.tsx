@@ -6,6 +6,8 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(data?.questions?.[0]?.id || null);
   const [currentPage, setCurrentPage] = useState(1);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
 
   const answerSheetImages = data?.answer_sheet_images_base64 || [];
   const totalPages = Math.max(1, answerSheetImages.length);
@@ -33,7 +35,9 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
     return answers.find((a: any) => a.id === mapping.answer_id);
   };
 
-  const selectedAnswer = selectedQuestionId ? getMappedAnswer(selectedQuestionId) : null;
+  const selectedAnswer = selectedQuestionId 
+    ? getMappedAnswer(selectedQuestionId) || unmatchedAnswers.find((a: any) => a.id === selectedQuestionId)
+    : null;
   const regions = selectedAnswer?.regions || [];
 
   const totalEarned = grades.reduce((sum: number, g: any) => sum + (g.marks || 0), 0);
@@ -69,13 +73,16 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
             <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold text-sm shadow-sm border border-orange-200">
               Score: {totalEarned}/{totalMax}
             </div>
-            <button className="bg-white px-3 py-1 text-sm font-medium border border-gray-200 rounded-full shadow-sm hover:bg-gray-50">Expand All</button>
+            <button onClick={() => setIsAllExpanded(!isAllExpanded)} className="bg-white px-3 py-1 text-sm font-medium border border-gray-200 rounded-full shadow-sm hover:bg-gray-50">
+              {isAllExpanded ? "Collapse All" : "Expand All"}
+            </button>
           </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {questions.map((q: any) => {
             const isSelected = selectedQuestionId === q.id;
+            const isExpanded = isSelected || isAllExpanded;
             const grade = getGrade(q.id);
             const scoreColor = grade?.marks === grade?.max_marks ? 'text-green-600' : 'text-red-500';
             
@@ -111,12 +118,12 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
                       {grade?.marks || 0}/{grade?.max_marks || q.marks}
                     </div>
                     <div className="text-gray-400">
-                      {isSelected ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                     </div>
                   </div>
                 </div>
 
-                {isSelected && grade?.feedback && (
+                {isExpanded && grade?.feedback && (
                   <div className="px-4 pb-4 pt-0">
                     <div className="bg-gray-50 rounded-lg p-4 ml-12">
                       <h4 className="font-bold text-gray-800 text-sm mb-1">AI Feedback</h4>
@@ -127,6 +134,48 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
               </div>
             );
           })}
+          
+          {unmatchedAnswers.length > 0 && (
+            <div className="mt-8 mb-4 border-t border-gray-100 pt-6">
+              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                Unmatched Answers 
+                <span className="text-gray-500 font-normal text-xs bg-gray-100 px-2 py-1 rounded-md">Not in Question Paper</span>
+              </h3>
+              <div className="space-y-4">
+                {unmatchedAnswers.map((ans: any) => {
+                  const isSelected = selectedQuestionId === ans.id;
+                  return (
+                    <div 
+                      key={ans.id} 
+                      onClick={() => {
+                        setSelectedQuestionId(ans.id);
+                        if (ans && ans.regions && ans.regions.length > 0) {
+                          const ansPage = ans.regions[0].page;
+                          if (ansPage >= 1 && ansPage <= totalPages) {
+                            setCurrentPage(ansPage);
+                          }
+                        }
+                      }}
+                      className={`border rounded-xl cursor-pointer transition ${isSelected ? 'border-orange-500 shadow-md ring-1 ring-orange-500/20' : 'border-gray-100 hover:border-gray-300'}`}
+                    >
+                      <div className="p-4 flex gap-4 items-start">
+                        <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-white ${isSelected ? 'bg-orange-500' : 'bg-gray-600'}`}>
+                          {ans.question_number || '?'}
+                        </div>
+                        <div className="flex-1 text-sm text-gray-700 leading-relaxed pt-1">
+                          {ans.text}
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0 pt-1">
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full font-bold shadow-sm border border-gray-200">Extra Answer</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -137,9 +186,9 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
           
           <div className="flex items-center gap-4">
             <div className="flex items-center bg-gray-700 rounded-lg overflow-hidden text-sm">
-              <button className="px-3 py-1.5 hover:bg-gray-600 transition"><Minus size={16}/></button>
-              <span className="px-2 font-medium">100%</span>
-              <button className="px-3 py-1.5 hover:bg-gray-600 transition"><Plus size={16}/></button>
+              <button onClick={() => setZoomLevel(p => Math.max(50, p - 25))} className="px-3 py-1.5 hover:bg-gray-600 transition"><Minus size={16}/></button>
+              <span className="px-2 font-medium w-14 text-center">{zoomLevel}%</span>
+              <button onClick={() => setZoomLevel(p => Math.min(200, p + 25))} className="px-3 py-1.5 hover:bg-gray-600 transition"><Plus size={16}/></button>
             </div>
             
             <div className="flex items-center bg-gray-700 rounded-lg overflow-hidden text-sm">
@@ -159,7 +208,7 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
         </div>
         
         <div className="flex-1 bg-gray-300 relative overflow-auto flex justify-center items-start p-4">
-           <div className="relative bg-white shadow-xl max-w-full inline-block">
+           <div className="relative bg-white shadow-xl max-w-full inline-block transition-transform duration-200 origin-top" style={{ transform: `scale(${zoomLevel / 100})` }}>
               {imageUrl ? (
                 <img src={imageUrl} alt="Answer Sheet" className="block max-w-full h-auto" />
               ) : (
@@ -173,7 +222,7 @@ export default function ResultsView({ data, answerSheetFile }: { data: any, answ
                 const left = `${(xmin / 1000) * 100}%`;
                 const width = `${((xmax - xmin) / 1000) * 100}%`;
                 const height = `${((ymax - ymin) / 1000) * 100}%`;
-                const qNum = questions.find((q: any) => q.id === selectedQuestionId)?.number;
+                const qNum = questions.find((q: any) => q.id === selectedQuestionId)?.number || unmatchedAnswers.find((a: any) => a.id === selectedQuestionId)?.question_number || '?';
 
                 return (
                   <div 
